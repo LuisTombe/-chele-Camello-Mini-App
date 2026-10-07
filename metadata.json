@@ -1,0 +1,6 @@
+{
+  "name": "Échele Camello",
+  "description": "Plataforma de intermediación y agendamiento de servicios técnicos y oficios en Neiva, Huila (SENA ADSO Ficha 3413988). Conecta con trabajadores calificados de tu zona de forma ágil y segura.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
