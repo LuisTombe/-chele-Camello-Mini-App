@@ -68,6 +68,7 @@ $iconMap = [
         <option value="rating">Mejor Calificación</option>
         <option value="distance">Más Cercanos</option>
         <option value="price">Menor Tarifa Base</option>
+        <option value="experience">Mayor Experiencia</option>
       </select>
     </div>
   </div>
@@ -85,6 +86,7 @@ $iconMap = [
         data-rating="<?= $w['rating'] ?>"
         data-distance="<?= $w['distance_km'] ?>"
         data-price="<?= $w['min_rate'] ?>"
+        data-experience="<?= (int)($w['experience_years'] ?? 0) ?>"
         data-search="<?= htmlspecialchars(strtolower($searchTerms)) ?>"
       >
         <div class="space-y-3">

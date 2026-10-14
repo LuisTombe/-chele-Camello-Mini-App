@@ -133,3 +133,36 @@ CREATE TABLE IF NOT EXISTS `audit_logs` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_audit_severity` (`severity`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 8. Tabla de Usuarios y Autenticación (schema_usuarios)
+CREATE TABLE IF NOT EXISTS `users` (
+    `id` VARCHAR(50) NOT NULL PRIMARY KEY,
+    `name` VARCHAR(100) NOT NULL,
+    `email` VARCHAR(100) NOT NULL UNIQUE,
+    `password_hash` VARCHAR(255) NOT NULL,
+    `role` ENUM('CLIENTE', 'TRABAJADOR', 'ADMINISTRADOR') DEFAULT 'CLIENTE',
+    `phone` VARCHAR(50),
+    `avatar` TEXT,
+    `is_verified` TINYINT(1) DEFAULT 0,
+    `verification_token` VARCHAR(100) NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 9. Tabla de Reportes y Moderación (schema_reputacion / moderacion)
+CREATE TABLE IF NOT EXISTS `reports` (
+    `id` VARCHAR(50) NOT NULL PRIMARY KEY,
+    `request_id` VARCHAR(50) NULL,
+    `reporter_id` VARCHAR(50) NOT NULL,
+    `reporter_role` ENUM('CLIENTE', 'TRABAJADOR', 'ADMINISTRADOR') NOT NULL,
+    `target_type` ENUM('WORKER', 'SERVICE', 'REVIEW', 'SOLICITUD') NOT NULL,
+    `target_id` VARCHAR(50) NOT NULL,
+    `reason` VARCHAR(150) NOT NULL,
+    `description` TEXT NOT NULL,
+    `status` ENUM('ABIERTO', 'EN_REVISION', 'RESUELTO', 'DESCARTADO') DEFAULT 'ABIERTO',
+    `resolution_notes` TEXT NULL,
+    `resolved_by` VARCHAR(100) NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_report_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

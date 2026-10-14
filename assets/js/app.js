@@ -714,6 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.sortBy === 'rating') return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
         if (state.sortBy === 'distance') return parseFloat(a.dataset.distance) - parseFloat(b.dataset.distance);
         if (state.sortBy === 'price') return parseInt(a.dataset.price) - parseInt(b.dataset.price);
+        if (state.sortBy === 'experience') return parseInt(b.dataset.experience || 0) - parseInt(a.dataset.experience || 0);
         return 0;
       });
       cards.forEach(c => container.appendChild(c));
