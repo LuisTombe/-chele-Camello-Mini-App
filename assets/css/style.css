@@ -1,0 +1,441 @@
+/* ===================================================
+   MICROSOFT FLUENT DESIGN SYSTEM 2 (WINDOWS 11 STYLE)
+   Échele Camello — Adaptation
+   =================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap');
+
+:root {
+  /* Fluent Palette */
+  --fluent-bg: #F3F3F3;
+  --fluent-bg-subtle: #F9F9F9;
+  --fluent-card: #FFFFFF;
+  --fluent-card-subtle: #FAFAFA;
+  
+  /* Fluent Primary Accent (Windows 11 Blue & Brand Terracotta) */
+  --fluent-accent: #0078D4;
+  --fluent-accent-hover: #106EBE;
+  --fluent-accent-active: #005A9E;
+  --fluent-accent-light: #EFF6FC;
+  
+  --fluent-brand-orange: #D96528;
+  --fluent-brand-hover: #C25319;
+
+  /* Fluent Text */
+  --fluent-text-primary: #242424;
+  --fluent-text-secondary: #616161;
+  --fluent-text-disabled: #A19F9D;
+
+  /* Fluent Borders & Dividers */
+  --fluent-stroke-card: rgba(0, 0, 0, 0.08);
+  --fluent-stroke-subtle: rgba(0, 0, 0, 0.05);
+  --fluent-stroke-control: #D1D1D1;
+  --fluent-stroke-control-bottom: #8A8A8A;
+
+  /* Fluent Radii */
+  --fluent-radius-sm: 4px;
+  --fluent-radius-md: 6px;
+  --fluent-radius-lg: 10px;
+  --fluent-radius-xl: 14px;
+
+  /* Fluent Elevation / Shadows */
+  --fluent-shadow-card: 0 2px 4px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.06);
+  --fluent-shadow-hover: 0 8px 16px rgba(0, 0, 0, 0.08), 0 0 2px rgba(0, 0, 0, 0.06);
+  --fluent-shadow-dialog: 0 24px 48px rgba(0, 0, 0, 0.18), 0 0 2px rgba(0, 0, 0, 0.1);
+  --fluent-shadow-flyout: 0 8px 16px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+}
+
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background-color: var(--fluent-bg);
+  color: var(--fluent-text-primary);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6, .font-fluent-title {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Scrollbar Fluent */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border: 2px solid var(--fluent-bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* -------------------------------------------
+   FLUENT MATERIALS: MICA & ACRYLIC
+------------------------------------------- */
+.fluent-mica {
+  background: rgba(243, 243, 243, 0.88);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+}
+
+.fluent-acrylic {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--fluent-stroke-card);
+}
+
+.fluent-acrylic-header {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* -------------------------------------------
+   FLUENT CARD & SURFACES
+------------------------------------------- */
+.fluent-card {
+  background: var(--fluent-card);
+  border: 1px solid var(--fluent-stroke-card);
+  border-radius: var(--fluent-radius-lg);
+  box-shadow: var(--fluent-shadow-card);
+  transition: all 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+.fluent-card:hover {
+  box-shadow: var(--fluent-shadow-hover);
+  border-color: rgba(0, 120, 212, 0.35);
+}
+
+.fluent-card-static {
+  background: var(--fluent-card);
+  border: 1px solid var(--fluent-stroke-card);
+  border-radius: var(--fluent-radius-lg);
+  box-shadow: var(--fluent-shadow-card);
+}
+
+/* -------------------------------------------
+   FLUENT BUTTONS
+------------------------------------------- */
+.fluent-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #FFFFFF;
+  color: var(--fluent-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--fluent-radius-md);
+  border: 1px solid var(--fluent-stroke-control);
+  border-bottom: 2px solid var(--fluent-stroke-control-bottom);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.12s ease-in-out;
+  user-select: none;
+}
+
+.fluent-btn:hover {
+  background: #F5F5F5;
+  border-color: #C7C7C7;
+  border-bottom-color: #707070;
+}
+
+.fluent-btn:active {
+  background: #EBEBEB;
+  border-bottom-width: 1px;
+  transform: translateY(1px);
+}
+
+.fluent-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--fluent-accent);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: var(--fluent-radius-md);
+  border: 1px solid var(--fluent-accent);
+  border-bottom: 2px solid #004E8C;
+  box-shadow: 0 2px 4px rgba(0, 120, 212, 0.25);
+  cursor: pointer;
+  transition: all 0.12s ease-in-out;
+  user-select: none;
+}
+
+.fluent-btn-primary:hover {
+  background: var(--fluent-accent-hover);
+  border-color: var(--fluent-accent-hover);
+}
+
+.fluent-btn-primary:active {
+  background: var(--fluent-accent-active);
+  border-bottom-width: 1px;
+  transform: translateY(1px);
+}
+
+.fluent-btn-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--fluent-brand-orange);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: var(--fluent-radius-md);
+  border: 1px solid var(--fluent-brand-orange);
+  border-bottom: 2px solid #A84412;
+  box-shadow: 0 2px 4px rgba(217, 101, 40, 0.25);
+  cursor: pointer;
+  transition: all 0.12s ease-in-out;
+}
+
+.fluent-btn-brand:hover {
+  background: var(--fluent-brand-hover);
+  border-color: var(--fluent-brand-hover);
+}
+
+.fluent-btn-brand:active {
+  border-bottom-width: 1px;
+  transform: translateY(1px);
+}
+
+.fluent-btn-subtle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--fluent-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--fluent-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.12s ease-in-out;
+}
+
+.fluent-btn-subtle:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.fluent-btn-subtle:active {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* -------------------------------------------
+   FLUENT INPUTS (WITH BOTTOM FOCUS ACCENT)
+------------------------------------------- */
+.fluent-input {
+  background: #FFFFFF;
+  color: var(--fluent-text-primary);
+  font-size: 13px;
+  padding: 7px 12px;
+  border-radius: var(--fluent-radius-md);
+  border: 1px solid var(--fluent-stroke-control);
+  border-bottom: 2px solid var(--fluent-stroke-control-bottom);
+  outline: none;
+  transition: all 0.12s ease-in-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.fluent-input:focus {
+  border-color: var(--fluent-stroke-control);
+  border-bottom: 2px solid var(--fluent-accent);
+  box-shadow: 0 2px 4px rgba(0, 120, 212, 0.1);
+}
+
+/* -------------------------------------------
+   FLUENT PIVOT TABS (BOTTOM ACCENT INDICATOR)
+------------------------------------------- */
+.fluent-tab-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fluent-text-secondary);
+  border-radius: var(--fluent-radius-md) var(--fluent-radius-md) 0 0;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.fluent-tab-item:hover {
+  color: var(--fluent-text-primary);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.fluent-tab-item.active {
+  color: var(--fluent-accent);
+}
+
+.fluent-tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  background: var(--fluent-accent);
+  border-radius: 3px 3px 0 0;
+}
+
+/* -------------------------------------------
+   FLUENT BADGES & CHIPS
+------------------------------------------- */
+.fluent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+}
+
+.fluent-badge-blue {
+  background: #EFF6FC;
+  color: #0F6CBD;
+  border-color: #C7DCF8;
+}
+
+.fluent-badge-green {
+  background: #EBF8F1;
+  color: #107C41;
+  border-color: #BBE7CF;
+}
+
+.fluent-badge-amber {
+  background: #FFF9E5;
+  color: #835C00;
+  border-color: #FEE89D;
+}
+
+.fluent-badge-red {
+  background: #FDF3F2;
+  color: #A80000;
+  border-color: #F8BFBE;
+}
+
+.fluent-badge-neutral {
+  background: #F3F2F1;
+  color: #605E5C;
+  border-color: #EDEBE9;
+}
+
+/* -------------------------------------------
+   FLUENT TOGGLE SWITCH (WINDOWS 11 STYLE)
+------------------------------------------- */
+.fluent-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 22px;
+}
+
+.fluent-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.fluent-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #FFFFFF;
+  border: 1px solid #707070;
+  transition: .2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 22px;
+}
+
+.fluent-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #616161;
+  transition: .2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+}
+
+input:checked + .fluent-slider {
+  background-color: var(--fluent-accent);
+  border-color: var(--fluent-accent);
+}
+
+input:checked + .fluent-slider:before {
+  transform: translateX(22px);
+  background-color: #FFFFFF;
+}
+
+/* -------------------------------------------
+   FLUENT MODAL DIALOG
+------------------------------------------- */
+.fluent-modal-overlay {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: opacity 0.2s ease;
+}
+
+.fluent-modal-dialog {
+  background: #FFFFFF;
+  border-radius: var(--fluent-radius-xl);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: var(--fluent-shadow-dialog);
+  overflow: hidden;
+}
+
+.fluent-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: #FAFAFA;
+}
+
+/* -------------------------------------------
+   MOBILE DEVICE FRAME FLUENT
+------------------------------------------- */
+.mobile-frame-container {
+  max-width: 420px !important;
+  margin: 16px auto !important;
+  border: 8px solid #2B2B2B;
+  border-radius: 36px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  background: var(--fluent-bg);
+  position: relative;
+}
+
+.mobile-notch {
+  width: 120px;
+  height: 14px;
+  background: #2B2B2B;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  z-index: 60;
+}
