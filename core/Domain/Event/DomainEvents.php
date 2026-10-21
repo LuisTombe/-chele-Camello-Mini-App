@@ -25,6 +25,12 @@ class SolicitudProgramadaEvent extends AbstractDomainEvent {
     }
 }
 
+class SolicitudReprogramadaEvent extends AbstractDomainEvent {
+    public function getEventName(): string {
+        return 'solicitud.reprogramada';
+    }
+}
+
 class SolicitudEnProcesoEvent extends AbstractDomainEvent {
     public function getEventName(): string {
         return 'solicitud.en_proceso';

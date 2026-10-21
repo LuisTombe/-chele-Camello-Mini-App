@@ -56,6 +56,54 @@ class WorkerRepository {
         return $result;
     }
 
+    public function updateProfile(
+        string $workerId,
+        string $name,
+        ?string $phone,
+        ?string $email,
+        string $specialty,
+        string $bio,
+        int $experienceYears,
+        int $minRate,
+        string $workingHours,
+        array $secondaryTrades
+    ): void {
+        $stmt = $this->pdo->prepare("UPDATE `workers` SET 
+            `name` = ?,
+            `phone` = ?,
+            `email` = ?,
+            `specialty` = ?,
+            `bio` = ?,
+            `experience_years` = ?,
+            `min_rate` = ?,
+            `working_hours` = ?,
+            `secondary_trades` = ?
+        WHERE `id` = ?");
+
+        $stmt->execute([
+            $name,
+            $phone,
+            $email,
+            $specialty,
+            $bio,
+            $experienceYears,
+            $minRate,
+            $workingHours,
+            json_encode($secondaryTrades, JSON_UNESCAPED_UNICODE),
+            $workerId
+        ]);
+    }
+
+    public function updateLocation(string $workerId, string $neighborhood, float $distanceKm): void {
+        $stmt = $this->pdo->prepare("UPDATE `workers` SET `neighborhood` = ?, `distance_km` = ? WHERE `id` = ?");
+        $stmt->execute([$neighborhood, $distanceKm, $workerId]);
+    }
+
+    public function updateAvatar(string $workerId, string $avatarUrl): void {
+        $stmt = $this->pdo->prepare("UPDATE `workers` SET `avatar` = ? WHERE `id` = ?");
+        $stmt->execute([$avatarUrl, $workerId]);
+    }
+
     public function updateAvailability(string $workerId, bool $available): void {
         $stmt = $this->pdo->prepare("UPDATE `workers` SET `is_available` = ? WHERE `id` = ?");
         $stmt->execute([$available ? 1 : 0, $workerId]);

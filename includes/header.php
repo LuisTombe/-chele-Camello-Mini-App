@@ -50,7 +50,12 @@ foreach ($allRequests as $r) {
 
       <!-- Controles de Rol y Simulador (Fluent Command Bar) -->
       <div class="flex items-center gap-2">
-        
+        <!-- Botón Notificaciones con Contador (ms-comunicacion) -->
+        <button type="button" id="btn-notifications" onclick="openNotificationsModal()" title="Bandeja de Notificaciones" class="relative fluent-btn-subtle p-1.5 rounded-md cursor-pointer text-[#616161] hover:text-[#242424]">
+          <i data-lucide="bell" class="w-4 h-4"></i>
+          <span id="notif-badge" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-rose-600 text-white rounded-full text-[9px] font-bold flex items-center justify-center">0</span>
+        </button>
+
         <!-- Toggle Simulador Móvil -->
         <button type="button" id="btn-toggle-device" onclick="toggleDeviceFrame()" title="Simulador Móvil" class="fluent-btn-subtle text-xs flex items-center gap-1 cursor-pointer">
           <i data-lucide="smartphone" class="w-4 h-4 text-[#616161]"></i>

@@ -6,6 +6,7 @@ use App\Domain\Event\SolicitudCreadaEvent;
 use App\Domain\Event\SolicitudAceptadaEvent;
 use App\Domain\Event\SolicitudRechazadaEvent;
 use App\Domain\Event\SolicitudProgramadaEvent;
+use App\Domain\Event\SolicitudReprogramadaEvent;
 use App\Domain\Event\SolicitudEnProcesoEvent;
 use App\Domain\Event\SolicitudFinalizadaEvent;
 use App\Domain\Event\SolicitudCanceladaEvent;
@@ -133,14 +134,21 @@ class RequestService {
 
                 $request->schedule($dto->actorRole, $dto->actorId, $date, $time);
                 $this->requestRepo->updateStatusAndSchedule($request);
-                $this->dispatcher->dispatch(new SolicitudProgramadaEvent([
+
+                $eventPayload = [
                     'requestId' => $request->getId(),
                     'code' => $request->getCode(),
                     'status' => 'PROGRAMADA',
                     'date' => $date,
                     'time' => $time,
                     'actor' => $dto->actorRole === 'TRABAJADOR' ? 'tecnico_camellador' : 'usuario_cliente'
-                ]));
+                ];
+
+                if ($oldStatus === 'PROGRAMADA') {
+                    $this->dispatcher->dispatch(new SolicitudReprogramadaEvent($eventPayload));
+                } else {
+                    $this->dispatcher->dispatch(new SolicitudProgramadaEvent($eventPayload));
+                }
                 break;
 
             case 'EN_PROCESO':

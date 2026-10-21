@@ -328,3 +328,27 @@
     </form>
   </div>
 </div>
+
+<!-- 6. MODAL: BANDEJA DE NOTIFICACIONES (MS-COMUNICACION / OBSERVER) -->
+<div id="modal-notifications" class="fluent-modal-overlay hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+  <div class="fluent-modal-dialog w-full max-w-md max-h-[80vh] flex flex-col">
+    <div class="fluent-modal-header flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-2">
+        <i data-lucide="bell" class="w-4 h-4 text-[#0078D4]"></i>
+        <h3 class="font-bold text-sm sm:text-base text-[#242424] font-fluent-title">Centro de Notificaciones</h3>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="markAllNotificationsAsRead()" class="text-[11px] text-[#0078D4] hover:underline font-semibold cursor-pointer">
+          Marcar leídas
+        </button>
+        <button type="button" onclick="closeModal('modal-notifications')" class="fluent-btn-subtle p-1.5 rounded-md text-[#616161] hover:text-[#242424]">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+    <div id="notifications-list-container" class="p-3 overflow-y-auto flex-1 space-y-2 bg-[#FAFAFA]">
+      <p class="text-xs text-[#8A8A8A] text-center py-6">No tienes notificaciones pendientes.</p>
+    </div>
+  </div>
+</div>
+

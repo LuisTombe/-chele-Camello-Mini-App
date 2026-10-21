@@ -21,7 +21,7 @@ class ServiceRepository {
     public function findByWorkerId(string $workerId, bool $onlyActive = false): array {
         $sql = "SELECT * FROM `services` WHERE `worker_id` = ?";
         if ($onlyActive) {
-            $sql .= " AND `is_active` = 1";
+            $sql .= " AND `is_active` = 1 AND `status` = 'ACTIVO'";
         }
         $sql .= " ORDER BY `created_at` DESC";
 
@@ -38,14 +38,15 @@ class ServiceRepository {
 
     public function save(Service $service): void {
         $stmt = $this->pdo->prepare("INSERT INTO `services` (
-            `id`, `worker_id`, `category_id`, `title`, `description`, `estimated_price`, `price_type`, `is_active`, `created_at`
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `id`, `worker_id`, `category_id`, `title`, `description`, `estimated_price`, `price_type`, `status`, `is_active`, `created_at`
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
             `category_id` = VALUES(`category_id`),
             `title` = VALUES(`title`),
             `description` = VALUES(`description`),
             `estimated_price` = VALUES(`estimated_price`),
             `price_type` = VALUES(`price_type`),
+            `status` = VALUES(`status`),
             `is_active` = VALUES(`is_active`)");
 
         $stmt->execute([
@@ -56,13 +57,14 @@ class ServiceRepository {
             $service->getDescription(),
             $service->getEstimatedPrice(),
             $service->getPriceType(),
+            $service->getStatus(),
             $service->isActive() ? 1 : 0,
             $service->getCreatedAt()
         ]);
     }
 
     public function updateStatus(string $serviceId, string $status, bool $isActive): void {
-        $stmt = $this->pdo->prepare("UPDATE `services` SET `is_active` = ? WHERE `id` = ?");
-        $stmt->execute([$isActive ? 1 : 0, $serviceId]);
+        $stmt = $this->pdo->prepare("UPDATE `services` SET `status` = ?, `is_active` = ? WHERE `id` = ?");
+        $stmt->execute([$status, $isActive ? 1 : 0, $serviceId]);
     }
 }

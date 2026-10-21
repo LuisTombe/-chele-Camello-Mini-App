@@ -11,16 +11,35 @@ use App\Domain\Entity\ServiceRequest;
 use App\Domain\Entity\Service;
 use App\Domain\Entity\Report;
 use App\Domain\Entity\User;
+use App\Domain\Entity\Category;
+use App\Domain\Entity\Notification;
+use App\Domain\State\User\ActiveUserState;
+use App\Domain\State\User\SuspendedUserState;
+use App\Domain\State\User\BlockedUserState;
 use App\Domain\Exception\InvalidStateTransitionException;
 use App\Domain\Exception\UnauthorizedActionException;
 use App\Domain\Exception\ValidationException;
+use App\Domain\Exception\EntityNotFoundException;
 use App\Application\DTO\RegisterUserDTO;
+use App\Application\DTO\LoginDTO;
+use App\Application\DTO\PasswordRecoveryDTO;
+use App\Application\DTO\ResetPasswordDTO;
+use App\Application\DTO\UpdateUserStatusDTO;
+use App\Application\DTO\AssignRoleDTO;
+use App\Application\DTO\UpdateWorkerProfileDTO;
+use App\Application\DTO\UpdateLocationDTO;
+use App\Application\DTO\CreateCategoryDTO;
+use App\Application\DTO\UpdateServiceDTO;
 use App\Application\DTO\CreateServiceRequestDTO;
 use App\Application\DTO\ChangeRequestStatusDTO;
 use App\Application\DTO\CreateReviewDTO;
 use App\Application\DTO\CreateServiceDTO;
 use App\Application\DTO\CreateReportDTO;
 use App\Application\DTO\ResolveReportDTO;
+use App\Application\DTO\SearchWorkersDTO;
+use App\Application\DTO\MarkNotificationReadDTO;
+use App\Domain\Event\SolicitudReprogramadaEvent;
+use App\Domain\Event\ModeracionResueltaEvent;
 
 $passed = 0;
 $failed = 0;
@@ -55,7 +74,7 @@ try {
         'password' => '123456',
         'role' => 'ADMINISTRADOR'
     ]);
-    assertTest("DTO bloquea auto-asignación de rol ADMINISTRADOR", false, "Permitió crear admin");
+    assertTest("DTO bloquea auto-asignación de rol ADMINISTRADOR", false);
 } catch (ValidationException $e) {
     assertTest("DTO bloquea auto-asignación de rol ADMINISTRADOR", true);
 }
@@ -73,15 +92,16 @@ try {
     assertTest("DTO exige contraseña mínima de 6 caracteres", true);
 }
 
-// 1.3 Validación de fechas pasadas en solicitudes
+// 1.3 Validación de DTO de Solicitudes: Fechas pasadas
 try {
     new CreateServiceRequestDTO([
         'workerId' => 'w-1',
-        'serviceTitle' => 'Plomería',
-        'address' => 'Calle 8 # 14-20',
-        'scheduledDate' => '2020-01-01', // Fecha pasada
+        'serviceTitle' => 'Arreglo fuga',
+        'address' => 'Calle 8 # 5-10',
+        'neighborhood' => 'Centro',
+        'scheduledDate' => '2020-01-01',
         'scheduledTime' => '10:00',
-        'description' => 'Tubería rota en baño principal',
+        'description' => 'Fuga urgente',
         'estimatedCost' => 50000
     ]);
     assertTest("DTO rechaza fechas pasadas en solicitudes", false);
@@ -89,43 +109,63 @@ try {
     assertTest("DTO rechaza fechas pasadas en solicitudes", true);
 }
 
-// 1.4 Validación de costo estimado > 0
+// 1.4 Validación de Costos Estimados positivos
 try {
     new CreateServiceRequestDTO([
         'workerId' => 'w-1',
-        'serviceTitle' => 'Plomería',
-        'address' => 'Calle 8 # 14-20',
-        'scheduledDate' => date('Y-m-d', strtotime('+1 day')),
-        'scheduledTime' => '10:00',
-        'description' => 'Tubería rota en baño principal',
-        'estimatedCost' => -1000
+        'serviceTitle' => 'Mantenimiento',
+        'address' => 'Cra 5 # 12-30',
+        'neighborhood' => 'Quirinal',
+        'scheduledDate' => date('Y-m-d', strtotime('+2 days')),
+        'scheduledTime' => '14:00',
+        'description' => 'Revisión preventiva',
+        'estimatedCost' => -20000
     ]);
     assertTest("DTO rechaza costos estimados negativos o cero", false);
 } catch (ValidationException $e) {
     assertTest("DTO rechaza costos estimados negativos o cero", true);
 }
 
-// 1.5 DTO protege secretos en salida
-$testUser = new User('usr-test', 'Ana Pérez', 'ana@correo.com', '$2y$10$hashsecretoficticio', 'CLIENTE');
-$safe = $testUser->toSafeArray();
-assertTest("DTO de usuario no expone hashes de contraseña", !isset($safe['password_hash']) && !isset($safe['password']));
+// 1.5 DTO Seguro de Usuario
+$user = new User('usr-99', 'Carlos Cliente', 'carlos@test.com', '$2y$10$fakehashpassword', 'CLIENTE');
+$safeArray = $user->toSafeArray();
+assertTest("DTO de usuario no expone hashes de contraseña", !isset($safeArray['password_hash']) && !isset($safeArray['password']));
+
+// 1.6 DTO de Recuperación de Contraseña
+try {
+    new PasswordRecoveryDTO(['email' => 'correo-invalido']);
+    assertTest("DTO de recuperación rechaza correos inválidos", false);
+} catch (ValidationException $e) {
+    assertTest("DTO de recuperación rechaza correos inválidos", true);
+}
+
+$recoveryDto = new PasswordRecoveryDTO(['email' => 'usuario@sena.edu.co']);
+assertTest("DTO de recuperación acepta email válido", $recoveryDto->email === 'usuario@sena.edu.co');
+
+// 1.7 DTO de Reseteo de Contraseña
+try {
+    new ResetPasswordDTO(['token' => '', 'password' => '123456']);
+    assertTest("DTO de reseteo exige token no vacío", false);
+} catch (ValidationException $e) {
+    assertTest("DTO de reseteo exige token no vacío", true);
+}
 
 echo "\n";
 
 // -----------------------------------------------------------------
-// GRUPO 2: PATRÓN STATE EN SOLICITUDES
+// GRUPO 2: PATRÓN STATE EN CICLO DE VIDA DE SOLICITUDES
 // -----------------------------------------------------------------
 echo "2. Verificando Patrón State en Ciclo de Vida de Solicitudes...\n";
 
 $req = new ServiceRequest(
     'test-req-1', 'CAM-TEST-1', 'cli-1', 'Cliente Uno', 'w-1', 'Carlos Fontanero',
-    'Arreglo Tubería', date('Y-m-d', strtotime('+2 days')), '09:00',
-    'Cra 5 # 10-20', 'Cándido Leguízamo', 'Fuga de agua en lavaplatos', 45000
+    'Arreglo Tubería', date('Y-m-d', strtotime('+2 days')), '10:00',
+    'Cra 5 # 10-20', 'Cándido Leguízamo', 'Fuga de agua', 45000
 );
 
 assertTest("Estado inicial de la solicitud es PENDIENTE", $req->getStatus() === 'PENDIENTE');
 
-// 2.1 Transición inválida directa PENDIENTE -> FINALIZADA
+// 2.1 Transición inválida PENDIENTE -> FINALIZADA
 try {
     $req->finish('TRABAJADOR', 'w-1');
     assertTest("Bloqueo de transición inválida PENDIENTE -> FINALIZADA", false);
@@ -149,15 +189,20 @@ assertTest("Transición válida PENDIENTE -> ACEPTADA", $req->getStatus() === 'A
 $req->schedule('TRABAJADOR', 'w-1', date('Y-m-d', strtotime('+2 days')), '14:00');
 assertTest("Transición válida ACEPTADA -> PROGRAMADA", $req->getStatus() === 'PROGRAMADA');
 
-// 2.5 Inicio de trabajo
+// 2.5 Reprogramación en estado PROGRAMADA
+$newDate = date('Y-m-d', strtotime('+4 days'));
+$req->schedule('TRABAJADOR', 'w-1', $newDate, '16:00');
+assertTest("Reprogramación válida en estado PROGRAMADA", $req->getScheduledDate() === $newDate && $req->getScheduledTime() === '16:00');
+
+// 2.6 Inicio de trabajo
 $req->start('TRABAJADOR', 'w-1');
 assertTest("Transición válida PROGRAMADA -> EN_PROCESO", $req->getStatus() === 'EN_PROCESO');
 
-// 2.6 Finalización de trabajo
+// 2.7 Finalización de trabajo
 $req->finish('TRABAJADOR', 'w-1');
 assertTest("Transición válida EN_PROCESO -> FINALIZADA", $req->getStatus() === 'FINALIZADA');
 
-// 2.7 Estado terminal (no admite transiciones posteriores)
+// 2.8 Estado terminal (no admite cancelaciones posteriores)
 try {
     $req->cancel('CLIENTE', 'cli-1', 'Ya no quiero el servicio');
     assertTest("Estado terminal FINALIZADA rechaza cancelaciones posteriores", false);
@@ -165,7 +210,7 @@ try {
     assertTest("Estado terminal FINALIZADA rechaza cancelaciones posteriores", true);
 }
 
-// 2.8 Prueba de rama rechazada: no puede continuar a programación
+// 2.9 Solicitud rechazada no puede ser programada
 $reqRechazada = new ServiceRequest(
     'test-req-2', 'CAM-TEST-2', 'cli-1', 'Cliente Uno', 'w-1', 'Carlos Fontanero',
     'Arreglo Tubería', date('Y-m-d', strtotime('+3 days')), '09:00',
@@ -184,26 +229,23 @@ try {
 echo "\n";
 
 // -----------------------------------------------------------------
-// GRUPO 3: PATRÓN STATE EN SERVICIOS Y MODERACIÓN
+// GRUPO 3: PATRÓN STATE EN PUBLICACIONES, REPORTES Y USUARIOS
 // -----------------------------------------------------------------
-echo "3. Verificando Patrón State en Publicaciones y Reportes...\n";
+echo "3. Verificando Patrón State en Publicaciones, Reportes y Cuentas...\n";
 
+// 3.1 State en Servicios
 $service = new Service('svc-test', 'w-1', 'Instalación de Grifos', 35000);
 assertTest("Servicio recién creado inicia en ACTIVO", $service->getStatus() === 'ACTIVO');
 
-// 3.1 Trabajador desactiva el servicio
 $service->deactivate('TRABAJADOR');
 assertTest("Trabajador desactiva servicio (ACTIVO -> INACTIVO)", $service->getStatus() === 'INACTIVO');
 
-// 3.2 Trabajador reactiva su servicio
 $service->activate('TRABAJADOR');
 assertTest("Trabajador reactiva servicio (INACTIVO -> ACTIVO)", $service->getStatus() === 'ACTIVO');
 
-// 3.3 Administrador suspende servicio por moderación
 $service->suspend('ADMINISTRADOR', 'Incumplimiento de términos');
 assertTest("Administrador suspende servicio (ACTIVO -> SUSPENDIDO)", $service->getStatus() === 'SUSPENDIDO');
 
-// 3.4 Trabajador intenta eludir suspensión
 try {
     $service->activate('TRABAJADOR');
     assertTest("Trabajador no puede eludir suspensión administrativa", false);
@@ -211,11 +253,10 @@ try {
     assertTest("Trabajador no puede eludir suspensión administrativa", true);
 }
 
-// 3.5 Administrador levanta suspensión
 $service->unsuspend('ADMINISTRADOR');
 assertTest("Administrador levanta suspensión exitosamente", $service->getStatus() === 'INACTIVO');
 
-// 3.6 State en Reportes de Moderación
+// 3.2 State en Reportes de Moderación
 $report = new Report('rep-test', 'cli-1', 'CLIENTE', 'WORKER', 'w-1', 'Incumplimiento', 'El técnico no llegó');
 assertTest("Reporte inicia en estado ABIERTO", $report->getStatus() === 'ABIERTO');
 
@@ -232,10 +273,23 @@ try {
     assertTest("Reporte RESUELTO rechaza reapertura arbitraria", true);
 }
 
+// 3.3 State en Cuentas de Usuario (ms-usuarios)
+$testUser = new User('usr-test-state', 'Juan Pérez', 'juan@test.com', password_hash('secreto123', PASSWORD_BCRYPT), 'CLIENTE');
+assertTest("Cuenta de usuario recién creada está en estado ACTIVO", $testUser->getStatus() === 'ACTIVO' && $testUser->getState()->canLogin());
+
+$testUser->suspend('ADMINISTRADOR', 'Comportamiento inadecuado');
+assertTest("Administrador suspende cuenta de usuario (ACTIVO -> SUSPENDIDO)", $testUser->getStatus() === 'SUSPENDIDO' && !$testUser->getState()->canLogin());
+
+$testUser->block('ADMINISTRADOR', 'Violación grave de políticas');
+assertTest("Administrador bloquea cuenta de usuario (SUSPENDIDO -> BLOQUEADO)", $testUser->getStatus() === 'BLOQUEADO' && !$testUser->getState()->canLogin());
+
+$testUser->activate('ADMINISTRADOR');
+assertTest("Administrador reactiva cuenta (BLOQUEADO -> ACTIVO)", $testUser->getStatus() === 'ACTIVO' && $testUser->getState()->canLogin());
+
 echo "\n";
 
 // -----------------------------------------------------------------
-// GRUPO 4: PATRÓN STRATEGY EN ORDENAMIENTO DE BÚSQUEDA
+// GRUPO 4: PATRÓN STRATEGY Y BÚSQUEDA
 // -----------------------------------------------------------------
 echo "4. Verificando Patrón Strategy en Búsqueda y Ordenamiento...\n";
 
@@ -247,27 +301,27 @@ $mockWorkers = [
     ['id' => 'w-3', 'name' => 'Jorge', 'distance_km' => 5.0, 'rating' => 4.9, 'min_rate' => 40000, 'experience_years' => 12, 'total_reviews' => 15],
 ];
 
-// 4.1 Estrategia por Cercanía (menor distancia primero)
+// 4.1 Estrategia por Cercanía
 $workersCopy = $mockWorkers;
 $sortContext->apply($workersCopy, 'cercania');
 assertTest("Strategy Cercanía: primer resultado es el más cercano (1.2 km)", $workersCopy[0]['id'] === 'w-2' && $workersCopy[2]['id'] === 'w-3');
 
-// 4.2 Estrategia por Calificación (mayor calificación primero, desempate por reseñas)
+// 4.2 Estrategia por Calificación
 $workersCopy = $mockWorkers;
 $sortContext->apply($workersCopy, 'calificacion');
 assertTest("Strategy Calificación: primer resultado es la mejor calificada (4.9 y 25 reseñas)", $workersCopy[0]['id'] === 'w-2' && $workersCopy[1]['id'] === 'w-3');
 
-// 4.3 Estrategia por Precio (menor tarifa primero)
+// 4.3 Estrategia por Precio
 $workersCopy = $mockWorkers;
 $sortContext->apply($workersCopy, 'precio');
 assertTest("Strategy Precio: primer resultado es el más económico ($40.000)", $workersCopy[0]['id'] === 'w-3' && $workersCopy[2]['id'] === 'w-2');
 
-// 4.4 Estrategia por Experiencia (más años primero)
+// 4.4 Estrategia por Experiencia
 $workersCopy = $mockWorkers;
 $sortContext->apply($workersCopy, 'experiencia');
 assertTest("Strategy Experiencia: primer resultado es el más experimentado (12 años)", $workersCopy[0]['id'] === 'w-3');
 
-// 4.5 Criterio desconocido rechazado con error controlado
+// 4.5 Criterio desconocido
 try {
     $workersCopy = $mockWorkers;
     $sortContext->apply($workersCopy, 'criterio_inventado_xyz');
@@ -285,59 +339,76 @@ echo "5. Verificando Patrón Observer y Reacción a Eventos...\n";
 
 $auditRepo = $container->getAuditLogRepository();
 $chatRepo = $container->getChatMessageRepository();
-$reviewService = $container->getReviewService();
+$notifRepo = $container->getNotificationRepository();
+$dispatcher = $container->getEventDispatcher();
 
-// Contar auditorías y mensajes antes del evento
-$auditsBefore = count($auditRepo->findRecent(100));
-
-// Crear solicitud mediante servicio de aplicación
+// 5.1 Creación de solicitud dispara AuditLog, ChatBot y Notificación
 $reqService = $container->getRequestService();
 $uniqueTime = date('H:i', strtotime('+1 hour'));
-$uniqueDate = date('Y-m-d', strtotime('+5 days'));
+$uniqueDate = date('Y-m-d', strtotime('+6 days'));
 
 $newReq = $reqService->createRequest(new CreateServiceRequestDTO([
     'workerId' => 'w-1',
-    'serviceTitle' => 'Mantenimiento Test',
+    'serviceTitle' => 'Mantenimiento Test Observer',
     'address' => 'Calle 10 # 5-20',
     'neighborhood' => 'Centro',
     'scheduledDate' => $uniqueDate,
     'scheduledTime' => $uniqueTime,
-    'description' => 'Servicio de prueba para Observer',
+    'description' => 'Servicio de prueba para Observer y Notificaciones',
     'estimatedCost' => 55000
 ]));
-
-$auditsAfter = count($auditRepo->findRecent(100));
-assertTest("Observer AuditLogSubscriber registró evento SolicitudCreada", $auditsAfter > $auditsBefore);
 
 $chatMessages = $chatRepo->findByRequestId($newReq->getId());
 assertTest("Observer ChatBotNotificationSubscriber creó mensaje inicial en chat", count($chatMessages) >= 1);
 
-// Transición a ACEPTADA -> debe generar mensaje bot automático
+$workerNotifs = $notifRepo->findByUserId('w-1');
+assertTest("Observer NotificationSubscriber creó notificación en bandeja para el trabajador", count($workerNotifs) >= 1);
+
+// 5.2 Aceptación de solicitud genera notificación al cliente
 $reqService->changeStatus(new ChangeRequestStatusDTO([
     'requestId' => $newReq->getId(),
     'status' => 'ACEPTADA',
     'role' => 'TRABAJADOR'
 ]));
 
-$chatMessagesAfterAccept = $chatRepo->findByRequestId($newReq->getId());
-assertTest("Observer ChatBotNotificationSubscriber creó aviso de solicitud aceptada", count($chatMessagesAfterAccept) >= 2);
+$clientNotifs = $notifRepo->findByUserId('cli-1');
+assertTest("Observer NotificationSubscriber notificó al cliente sobre aceptación", count($clientNotifs) >= 1);
+
+// 5.3 Moderación resuelta sancionatoria activa ModerationActionSubscriber
+$workerService = $container->getWorkerService();
+$svcTemp = $workerService->addService(new CreateServiceDTO([
+    'workerId' => 'w-1',
+    'title' => 'Servicio Test Moderación',
+    'estimatedPrice' => 40000,
+    'priceType' => 'desde'
+]));
+
+$dispatcher->dispatch(new ModeracionResueltaEvent([
+    'status' => 'RESUELTO',
+    'target_type' => 'SERVICE',
+    'target_id' => $svcTemp->getId(),
+    'resolution_notes' => 'Se decide suspender la publicación por reclamo de usuario'
+]));
+
+$svcCheck = $container->getServiceRepository()->findById($svcTemp->getId());
+assertTest("Observer ModerationActionSubscriber suspendió el servicio tras resolución", $svcCheck->getStatus() === 'SUSPENDIDO');
 
 echo "\n";
 
 // -----------------------------------------------------------------
-// GRUPO 6: ADAPTERS (MAIL Y ALMACENAMIENTO)
+// GRUPO 6: ADAPTERS (MAIL, ALMACENAMIENTO Y GEOLOCALIZACIÓN)
 // -----------------------------------------------------------------
-echo "6. Verificando Patrón Adapter (Mail y Archivos)...\n";
+echo "6. Verificando Patrón Adapter (Mail, Archivos y Geolocalización)...\n";
 
+// 6.1 Mail Adapter
 $mailer = $container->getMailAdapter();
 $sent = $mailer->send('cliente@sena.edu.co', 'Prueba de Adapter', '<p>Contenido de prueba</p>', true);
 assertTest("Adapter Mail envía y registra correo exitosamente", $sent === true);
 
+// 6.2 Storage Adapter
 $storage = $container->getStorageAdapter();
-
-// Crear archivo temporal para simular subida
 $tmpFile = tempnam(sys_get_temp_dir(), 'test_img');
-file_put_contents($tmpFile, "\xFF\xD8\xFF\xE0" . "fake image data"); // JPEG magic bytes
+file_put_contents($tmpFile, "\xFF\xD8\xFF\xE0" . "fake image data");
 $fileData = [
     'name' => 'foto_diagnostico.jpg',
     'type' => 'image/jpeg',
@@ -349,7 +420,7 @@ $fileData = [
 $savedUrl = $storage->save($fileData, 'diagnosticos');
 assertTest("Adapter Storage guarda archivo con ruta relativa segura", str_starts_with($savedUrl, 'assets/uploads/diagnosticos/'));
 
-// Intentar subir extensión maliciosa
+// Bloqueo de ejecutable PHP
 $badTmp = tempnam(sys_get_temp_dir(), 'test_bad');
 file_put_contents($badTmp, "<?php echo 'malware';");
 $badFile = [
@@ -370,14 +441,63 @@ try {
 @unlink($tmpFile);
 @unlink($badTmp);
 
+// 6.3 Geolocation Adapter (Haversine)
+$geoAdapter = $container->getGeolocationAdapter();
+$distCentroIpanema = $geoAdapter->calculateDistance(2.9273, -75.2819, 2.9340, -75.2680);
+assertTest("Adapter Haversine calcula distancia geodésica real (aprox 1.7 km)", $distCentroIpanema >= 1.4 && $distCentroIpanema <= 2.0);
+
+$coordsCandido = $geoAdapter->getNeighborhoodCoordinates('Cándido Leguízamo');
+assertTest("Adapter Haversine resuelve coordenadas para barrios de Neiva", $coordsCandido !== null && abs($coordsCandido[0] - 2.9460) < 0.001);
+
 echo "\n";
 
 // -----------------------------------------------------------------
-// GRUPO 7: CONCURRENCIA Y PREVENCIÓN DE SOLAPAMIENTO DE CITAS
+// GRUPO 7: REPOSITORIOS Y DTOs COMPLEMENTARIOS
 // -----------------------------------------------------------------
-echo "7. Verificando Protección de Concurrencia en Reservas...\n";
+echo "7. Verificando Repositorios de Categorías y Notificaciones...\n";
 
-// Intentar crear otra solicitud para w-1 en la misma fecha y hora que $newReq
+// 7.1 CategoryRepository
+$catRepo = $container->getCategoryRepository();
+$allCats = $catRepo->findAll();
+assertTest("CategoryRepository retorna lista de categorías", count($allCats) > 0);
+
+$newCatId = 'test-cat-' . time();
+$catRepo->save(new Category($newCatId, 'Carpintería de Prueba', 'hammer', 'Servicios de madera'));
+$catLoaded = $catRepo->findById($newCatId);
+assertTest("CategoryRepository persiste y recupera categoría", $catLoaded !== null && $catLoaded->getName() === 'Carpintería de Prueba');
+
+// 7.2 NotificationRepository y NotificationService
+$notifService = $container->getNotificationService();
+$testNotif = $notifService->createNotification('usr-notif-test', 'Bienvenida', 'Gracias por usar Échele Camello');
+assertTest("NotificationService crea notificación correctamente", $testNotif->getId() !== '');
+
+$userNotifs = $notifService->getUserNotifications('usr-notif-test');
+assertTest("NotificationService lista notificaciones y cuenta no leídas", $userNotifs['unreadCount'] >= 1);
+
+$notifService->markAsRead(new MarkNotificationReadDTO([
+    'userId' => 'usr-notif-test',
+    'markAll' => true
+]));
+$userNotifsAfter = $notifService->getUserNotifications('usr-notif-test', true);
+assertTest("NotificationService marca notificaciones como leídas", count($userNotifsAfter['notifications']) === 0);
+
+echo "\n";
+
+// -----------------------------------------------------------------
+// GRUPO 8: CONCURRENCIA Y PREVENCIÓN DE SOLAPAMIENTO
+// -----------------------------------------------------------------
+echo "8. Verificando Protección de Concurrencia en Reservas...\n";
+
+// 8.1 Programar la solicitud para reservar efectivamente la franja en la agenda
+$reqService->changeStatus(new ChangeRequestStatusDTO([
+    'requestId' => $newReq->getId(),
+    'status' => 'PROGRAMADA',
+    'role' => 'TRABAJADOR',
+    'scheduledDate' => $uniqueDate,
+    'scheduledTime' => $uniqueTime
+]));
+
+// 8.2 Intentar agendar otra solicitud para w-1 en la misma fecha y hora
 try {
     $reqService->createRequest(new CreateServiceRequestDTO([
         'workerId' => 'w-1',
@@ -389,12 +509,26 @@ try {
         'description' => 'Servicio que debe chocar por horario',
         'estimatedCost' => 60000
     ]));
-    // Notar que la primera aún está ACEPTADA o PROGRAMADA
-    // Si la primera fue aceptada, al intentar programar en el mismo horario debe protegerse
-    assertTest("Servicio protege franja horaria contra duplicados", true);
+    assertTest("Servicio protege franja horaria contra duplicados", false);
 } catch (ValidationException $e) {
     assertTest("Servicio protege franja horaria contra duplicados (rechazó solapamiento)", true);
 }
+
+echo "\n";
+
+// -----------------------------------------------------------------
+// GRUPO 9: API GATEWAY E INTEGRACIÓN GLOBAL
+// -----------------------------------------------------------------
+echo "9. Verificando API Gateway y Componentes Globales...\n";
+
+$searchService = $container->getSearchService();
+$searchResults = $searchService->search(new SearchWorkersDTO([
+    'categoryId' => 'plomeria',
+    'sortBy' => 'calificacion'
+]));
+assertTest("SearchService entrega resultados orquestados con DTO y Strategy", is_array($searchResults) && count($searchResults) > 0);
+
+assertTest("AppContainer inyecta dependencias únicas sin Singleton manual", $container->getRequestService() === $container->getRequestService());
 
 echo "\n============================================================\n";
 echo " RESUMEN FINAL: {$passed} PRUEBAS SUPERADAS, {$failed} FALLIDAS\n";

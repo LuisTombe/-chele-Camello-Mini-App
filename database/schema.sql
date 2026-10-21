@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS `services` (
     `description` TEXT,
     `estimated_price` INT NOT NULL,
     `price_type` ENUM('fijo', 'desde', 'por_hora') DEFAULT 'desde',
+    `status` ENUM('ACTIVO', 'INACTIVO', 'SUSPENDIDO') DEFAULT 'ACTIVO',
     `is_active` TINYINT(1) DEFAULT 1,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_worker` (`worker_id`),
@@ -141,10 +142,14 @@ CREATE TABLE IF NOT EXISTS `users` (
     `email` VARCHAR(100) NOT NULL UNIQUE,
     `password_hash` VARCHAR(255) NOT NULL,
     `role` ENUM('CLIENTE', 'TRABAJADOR', 'ADMINISTRADOR') DEFAULT 'CLIENTE',
+    `status` ENUM('ACTIVO', 'SUSPENDIDO', 'BLOQUEADO') DEFAULT 'ACTIVO',
+    `status_reason` TEXT NULL,
     `phone` VARCHAR(50),
     `avatar` TEXT,
     `is_verified` TINYINT(1) DEFAULT 0,
     `verification_token` VARCHAR(100) NULL,
+    `reset_token` VARCHAR(100) NULL,
+    `reset_expires` VARCHAR(50) NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -165,4 +170,19 @@ CREATE TABLE IF NOT EXISTS `reports` (
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX `idx_report_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10. Tabla de Notificaciones (schema_comunicacion)
+CREATE TABLE IF NOT EXISTS `notifications` (
+    `id` VARCHAR(50) NOT NULL PRIMARY KEY,
+    `user_id` VARCHAR(50) NOT NULL,
+    `title` VARCHAR(150) NOT NULL,
+    `message` TEXT NOT NULL,
+    `type` ENUM('SOLICITUD', 'MENSAJE', 'MODERACION', 'SISTEMA') DEFAULT 'SOLICITUD',
+    `link` VARCHAR(255) NULL,
+    `is_read` TINYINT(1) DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_notif_user` (`user_id`),
+    INDEX `idx_notif_read` (`is_read`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 

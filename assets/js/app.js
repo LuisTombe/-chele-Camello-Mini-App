@@ -103,6 +103,7 @@ function switchRole(role) {
   }
 
   showToast(`Modo cambiado a: ${role}`);
+  loadNotificationsBadge();
 }
 
 // Toggle Simulador Móvil Fluent
@@ -728,4 +729,93 @@ document.addEventListener('DOMContentLoaded', () => {
       selectNeighborhood(e.target.value);
     });
   }
+
+  // Cargar badge inicial de notificaciones
+  loadNotificationsBadge();
 });
+
+// =========================================================================
+// MÓDULO DE NOTIFICACIONES (MS-COMUNICACION / OBSERVER)
+// =========================================================================
+function getCurrentUserId() {
+  if (state.currentRole === 'TRABAJADOR') return 'w-1';
+  if (state.currentRole === 'ADMINISTRADOR') return 'admin_lucia';
+  return 'cli-1';
+}
+
+async function loadNotificationsBadge() {
+  try {
+    const userId = getCurrentUserId();
+    const res = await fetch(`api/notifications.php?userId=${encodeURIComponent(userId)}&unreadOnly=1`);
+    const data = await res.json();
+    const badge = document.getElementById('notif-badge');
+    if (badge) {
+      if (data.success && data.unreadCount > 0) {
+        badge.textContent = data.unreadCount;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+  } catch (e) {
+    console.error('Error cargando badge de notificaciones:', e);
+  }
+}
+
+async function openNotificationsModal() {
+  openModal('modal-notifications');
+  const container = document.getElementById('notifications-list-container');
+  if (!container) return;
+  container.innerHTML = '<p class="text-xs text-[#8A8A8A] text-center py-6">Cargando notificaciones...</p>';
+
+  try {
+    const userId = getCurrentUserId();
+    const res = await fetch(`api/notifications.php?userId=${encodeURIComponent(userId)}`);
+    const data = await res.json();
+
+    if (!data.success || !data.notifications || data.notifications.length === 0) {
+      container.innerHTML = '<p class="text-xs text-[#8A8A8A] text-center py-6">No tienes notificaciones en este momento.</p>';
+      return;
+    }
+
+    container.innerHTML = data.notifications.map(n => `
+      <div class="p-3 bg-white rounded-lg border ${n.isRead ? 'border-[rgba(0,0,0,0.06)] opacity-75' : 'border-[#0078D4]/30 shadow-sm'} flex items-start gap-3">
+        <div class="w-7 h-7 rounded-md ${n.isRead ? 'bg-slate-100 text-slate-500' : 'bg-[#EFF6FC] text-[#0078D4]'} flex items-center justify-center shrink-0 mt-0.5">
+          <i data-lucide="${n.type === 'SOLICITUD' ? 'clipboard-list' : (n.type === 'MODERACION' ? 'shield-alert' : 'bell')}" class="w-3.5 h-3.5"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between gap-2">
+            <h5 class="font-bold text-xs text-[#242424] truncate">${n.title}</h5>
+            <span class="text-[10px] text-[#8A8A8A] shrink-0">${n.createdAt}</span>
+          </div>
+          <p class="text-[11px] text-[#616161] mt-0.5 leading-snug">${n.message}</p>
+        </div>
+      </div>
+    `).join('');
+
+    lucide.createIcons();
+    loadNotificationsBadge();
+  } catch (e) {
+    container.innerHTML = '<p class="text-xs text-rose-600 text-center py-6">Error al cargar notificaciones.</p>';
+  }
+}
+
+async function markAllNotificationsAsRead() {
+  try {
+    const userId = getCurrentUserId();
+    const res = await fetch('api/notifications.php?action=mark_read', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, markAll: true })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Notificaciones marcadas como leídas');
+      openNotificationsModal();
+      loadNotificationsBadge();
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+

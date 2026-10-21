@@ -96,6 +96,15 @@ class Service {
     public function getEstimatedPrice(): int { return $this->estimatedPrice; }
     public function getPriceType(): string { return $this->priceType; }
     public function getStatus(): string { return $this->state->getStatus(); }
+    public function updateDetails(string $title, int $estimatedPrice, string $priceType, ?string $description): void {
+        $this->title = $title;
+        $this->estimatedPrice = $estimatedPrice;
+        $this->priceType = $priceType;
+        if ($description !== null) {
+            $this->description = $description;
+        }
+    }
+
     public function isActive(): bool { return $this->state->getStatus() === 'ACTIVO'; }
     public function getCreatedAt(): string { return $this->createdAt; }
 
